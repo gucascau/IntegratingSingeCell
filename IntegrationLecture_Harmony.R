@@ -23,7 +23,7 @@
 # removing batche effects with Harmony
 ############################################
 
-## Step 1: loading the packages, 
+## Step 1: Load the packages, 
 ## Please install all the packages before loading them.
 
 library(harmony)
@@ -32,13 +32,13 @@ library(SeuratData)
 library(tidyverse)
 library(ggplot2)
 
-## set up the workspace environment:
+## Step 2: Set up the workspace environment:
 setwd("/Users/XXW004/Documents/Projects/LectureForSingleCellGroup/IntegrationSection/TestDatasets/")
 
 ## check the files in the current directory
 Datafiles<-list.files(path = "./", recursive = F, full.names = F)
 
-## 
+## Step 3: Read the objects
 ## Using loop to read the objects, add group column for each meta object, and save the object into a list accordingly to their names.
 ## 
 ## Create an empty list to store the objects
@@ -68,6 +68,7 @@ length(myobjectlist)
 # Check the first object meta data
 myobjectlist[[1]]@meta.data
 
+## Step 4: Merge the objects
 ## Merge multiple objects from the list, add cell id with different prefix, and create a project for the merged object.
 scrna<-merge(x=myobjectlist[[1]], y=c(myobjectlist[[2]], myobjectlist[[3]],myobjectlist[[4]]), add.cell.ids = c("A","B","C","D"), project="Integration")
 
@@ -77,8 +78,10 @@ str(scrna@meta.data)
 # View the meta data
 View(scrna@meta.data)
 
+
+## Step 4: Quality control of merged objects
 ## QC & filtering
-# calculate mitochondrial percentatge
+## calculate mitochondrial percentatge
 
 scrna$mitoPercent <-PercentageFeatureSet(scrna, pattern = '^MT-')
 
@@ -88,19 +91,9 @@ VlnPlot(scrna, features = c("mitoPercent", "nCount_RNA", "nFeature_RNA"))
 VlnPlot(scrna, features = c("mitoPercent", "nCount_RNA", "nFeature_RNA") , split.by = 'group')
 
 # filtering
-
 scrna <- subset (scrna, subset =mitoPercent <10 & nFeature_RNA >500 & nCount_RNA >200 )
 
-# # split the object
-# InstallData("ifnb")
-# 
-# # load dataset
-# LoadData("ifnb")
-# 
-# ifnb@meta.data
-# # split the objects
-
-
+## Step 5: Standard normalization, variable feature finding, PCA and UMAP analyses, and Plot the merged objects
 # perform the standard workflow to figure out if there are any batch effects
 scrna<- NormalizeData(object = scrna)
 
@@ -113,38 +106,48 @@ scrna<- RunPCA(object = scrna, npcs =15)
 scrna<- RunUMAP(scrna, dims = 1:15)
 BeforeHarmony<- DimPlot(scrna, reduction = "umap",split.by = 'group')
 BeforeHarmony
-## run harmony
 
+## Step 5: Run harmony 
+## Before running Harmony, we need to confirm the metadata of our Seurat object contains one or several variables describing the factors we want to integrate on.
+## We have defined the variable "group" to distinguish different samples.
+## Double check:
+levels(factor(scrna@meta.data$group))
 scrna@meta.data
+
+# note: we add a new reduction of 15 harmony 
 seurat.harmony.integrated <- RunHarmony(scrna, group.by.vars = 'group', dims.use = 1:15, plot_convergence= FALSE, project.dim = F)
 
+# check the reduction after running harmony
 seurat.harmony.integrated@reductions
 
 seurat.harmony.integrated.embed <- Embeddings(seurat.harmony.integrated, "harmony")
 
 seurat.harmony.integrated.embed[1:10,1:10]
 
-# Run Umap and clusering using Harmony reduction
+# To check whether harmony integration is reflected in the visualization, we also generate UMAP using harmony reduction.
+# Run Umap and clustering using Harmony reduction
 ?RunUMAP
 seurat.harmony.integrated <- RunUMAP(seurat.harmony.integrated,reduction='harmony', dim=1:15)
 
+# Runing the cluster also need to set up the harmony reduction to find neighbor and clusters.
 seurat.harmony.integrated<-FindNeighbors(seurat.harmony.integrated, reduction = 'harmony', dims = 1:15)
-
 seurat.harmony.integrated<- FindClusters(seurat.harmony.integrated, resolution=1)
 
-# visualization
+## Step 6: visualization of the dimplot using the harmony 
 
 DimHarmony<-DimPlot(seurat.harmony.integrated, reduction = 'umap', split.by = 'group')
 DimHarmony
+
+
+## 
 ## let's also compare with the CCA method
 # find integration anchor (CCA)
-## for four splited objects to perform the CCA method
+# for four split objects to perform the CCA method
 # split the objects
 SplitedObjects<- SplitObject(scrna, split.by = 'group')
 
 # check the split objects
 SplitedObjects
-
 length(SplitedObjects)
 
 ## Normalized dataset and Find variable features
@@ -154,13 +157,11 @@ for (i in 1: length(SplitedObjects)){
 }
 
 
-# select  intergration features
-
+# select  integration features
 features<- SelectIntegrationFeatures(object.list = SplitedObjects)
 head(features)
 
 # find integration anchor (CCA)
-
 anchors<- FindIntegrationAnchors(object.list = SplitedObjects, anchor.features = features)
 
 #anchors<- FindIntegrationAnchors(object.list = SplitedObjects, anchor.features = features)
@@ -190,9 +191,7 @@ grid.arrange(DimHarmony, DimCCA,  ncol = 1, nrow=2)
 
 ## potential way to check the integration methods:
 ## using the biomarkers
-
 FeaturePlot(seurat.harmony.integrated, features = c("PECAM1"), split.by = 'group', min.cutoff = 0.1)
-
 FeaturePlot(seurat.integrated, features = c("PECAM1"), split.by = 'group', min.cutoff = 0.1)
 
 ?FeaturePlot
