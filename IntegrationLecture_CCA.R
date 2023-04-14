@@ -26,14 +26,14 @@ library(gridExtra)
 library(ggplot2)
 library(tidyverse)
 
-## set up the workspace environment:
+## Step 2: set up the workspace environment:
 setwd("/Users/XXW004/Documents/Projects/LectureForSingleCellGroup/IntegrationSection/TestDatasets/")
 
 ## check the files in the current directory
 Datafiles<-list.files(path = "./", recursive = F, full.names = F)
 Datafiles
 
-## reading each sample
+## Step 3: reading each sample
 
 Control1<- readRDS(file = "GSM5627690_cont1.small.rds")
 Control2<- readRDS(file = "GSM5627691_cont2.small.rds")
