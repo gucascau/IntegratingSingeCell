@@ -194,4 +194,3 @@ grid.arrange(DimHarmony, DimCCA,  ncol = 1, nrow=2)
 FeaturePlot(seurat.harmony.integrated, features = c("PECAM1"), split.by = 'group', min.cutoff = 0.1)
 FeaturePlot(seurat.integrated, features = c("PECAM1"), split.by = 'group', min.cutoff = 0.1)
 
-?FeaturePlot
